@@ -22,7 +22,22 @@ def geocode_address(address):
 
 # Main Streamlit function
 def main():
-    st.title("CSV File Upload and Address Geocoding")
+    st.title("Fact Map Marker")
+
+    # Path to your sample geo.csv file
+    sample_file_path = 'C:/Users/admin/Downloads/map/geo.csv'
+
+    # Read the sample CSV file
+    with open(sample_file_path, 'rb') as f:
+        sample_csv = f.read()
+
+    # Button to download the sample CSV file
+    st.download_button(
+        label="Download sample CSV",
+        data=sample_csv,
+        file_name="geo.csv",
+        mime='text/csv',
+    )
 
     # File uploader to upload CSV files
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
@@ -30,6 +45,8 @@ def main():
     # Initialize session state
     if 'geocoded_data' not in st.session_state:
         st.session_state.geocoded_data = None
+    if 'selected_addresses' not in st.session_state:
+        st.session_state.selected_addresses = []
 
     if uploaded_file is not None:
         # Load the CSV into a DataFrame
@@ -66,25 +83,51 @@ def main():
         else:
             valid_df = st.session_state.geocoded_data
 
-        # Create a folium map with all valid coordinates
-        if not valid_df.empty:
-            # Focus on the first valid address
-            first_address_location = valid_df.iloc[0][['latitude', 'longitude']]
-            m = folium.Map(location=[first_address_location['latitude'], first_address_location['longitude']], zoom_start=12)
+        # Sidebar for address checkboxes
+        st.sidebar.title("Address Selection")
 
-            # Add markers to the map for valid addresses
+        # "Select All" checkbox
+        select_all = st.sidebar.checkbox("Select All")
+
+        # List of selected addresses
+        selected_addresses = []
+        for address in valid_df['address']:
+            if select_all:
+                # If "Select All" is checked, all individual checkboxes are pre-selected
+                selected = st.sidebar.checkbox(f"Select {address}", value=True, key=address)
+            else:
+                # Otherwise, the individual checkboxes can be selected manually
+                selected = st.sidebar.checkbox(f"Select {address}", key=address)
+            
+            if selected:
+                selected_addresses.append(address)
+
+        # Update session state
+        st.session_state.selected_addresses = selected_addresses
+
+        # Create a folium map with selected addresses
+        if selected_addresses:
+            # Focus on the first selected address
+            first_selected_address = selected_addresses[0]
+            selected_row = valid_df[valid_df['address'] == first_selected_address].iloc[0]
+            center_lat, center_lon = selected_row['latitude'], selected_row['longitude']
+
+            m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
+
+            # Add markers for selected addresses
             for index, row in valid_df.iterrows():
-                folium.Marker(
-                    location=[row['latitude'], row['longitude']],
-                    icon=folium.Icon(color='blue', icon='info-sign'),  # Customize marker symbol
-                    popup=f"Address: {row['address']}<br>Latitude: {row['latitude']}<br>Longitude: {row['longitude']}"
-                ).add_to(m)
+                if row['address'] in selected_addresses:
+                    folium.Marker(
+                        location=[row['latitude'], row['longitude']],
+                        icon=folium.Icon(color='blue', icon='info-sign'),  # Customize marker symbol
+                        popup=f"Address: {row['address']}<br>Latitude: {row['latitude']}<br>Longitude: {row['longitude']}"
+                    ).add_to(m)
 
             # Display the map in Streamlit
-            st.write("Fact Map Marker")
+            st.write("Map with Selected Addresses")
             st_folium(m, width=700, height=500, use_container_width=True)
         else:
-            st.warning("No valid coordinates to display on the map.")
+            st.warning("No addresses selected to display on the map.")
 
         # Save the updated DataFrame with latitudes and longitudes to your local folder
         output_path = 'C:/Users/admin/Downloads/store_data/geocoded_data.csv'
