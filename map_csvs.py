@@ -40,10 +40,6 @@ def main():
             st.error("The CSV file does not contain an 'address' column.")
             return
 
-        # Show the original addresses
-        st.write("Original addresses:")
-        st.dataframe(df[['address']])
-
         # Initialize lists for latitude and longitude
         latitudes = []
         longitudes = []
@@ -66,11 +62,7 @@ def main():
 
             # Show the DataFrame with latitudes and longitudes
             st.write("Geocoded Data:")
-            st.dataframe(df[['address', 'latitude', 'longitude']])
-
-            # Show the new DataFrame with no NaN values
-            st.write("Valid Geocoded Data:")
-            st.dataframe(valid_df)
+            st.dataframe(valid_df[['address', 'latitude', 'longitude']])
         else:
             valid_df = st.session_state.geocoded_data
 
@@ -84,11 +76,12 @@ def main():
             for index, row in valid_df.iterrows():
                 folium.Marker(
                     location=[row['latitude'], row['longitude']],
+                    icon=folium.Icon(color='blue', icon='info-sign'),  # Customize marker symbol
                     popup=f"Address: {row['address']}<br>Latitude: {row['latitude']}<br>Longitude: {row['longitude']}"
                 ).add_to(m)
 
             # Display the map in Streamlit
-            st.write("Geocoded Addresses on Map:")
+            st.write("Fact Map Marker")
             st_folium(m, width=700, height=500, use_container_width=True)
         else:
             st.warning("No valid coordinates to display on the map.")
