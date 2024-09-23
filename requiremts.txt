@@ -1,0 +1,6 @@
+streamlit
+pandas
+requests
+time
+folium
+streamlit_folium
